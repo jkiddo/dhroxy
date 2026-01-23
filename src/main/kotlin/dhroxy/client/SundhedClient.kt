@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
 import org.springframework.web.server.ResponseStatusException
+import reactor.core.publisher.Mono
 
 @Component
 class SundhedClient(
@@ -152,18 +153,59 @@ class SundhedClient(
     }
 
     suspend fun fetchAppointments(
-        incomingHeaders: HttpHeaders
+        incomingHeaders: HttpHeaders,
+        fra: String? = null,
+        til: String? = null
     ): AppointmentsResponse? {
-        return webClient.post()
+        log.info("Fetching appointments with fra={}, til={}", fra, til)
+
+        // Sundhed.dk API requires both fromDate and toDate to be non-null
+        // If not provided, use default range: 1 year back to 1 year ahead
+        val now = java.time.LocalDate.now()
+        val defaultFrom = now.minusYears(1).toString()
+        val defaultTo = now.plusYears(1).toString()
+
+        val effectiveFrom = fra ?: defaultFrom
+        val effectiveTo = til ?: defaultTo
+
+        val requestBody = AppointmentsRequest(
+            fromDate = effectiveFrom,
+            toDate = effectiveTo
+        )
+        log.debug("Sending appointments request body: fromDate={}, toDate={}", effectiveFrom, effectiveTo)
+
+        val requestWithBody = webClient.post()
             .uri("/app/aftalerborger/api/v1/aftaler/cpr")
-            .headers { copyForwardedHeaders(incomingHeaders, it) }
+            .headers { h ->
+                copyForwardedHeaders(incomingHeaders, h)
+                h.contentType = MediaType.APPLICATION_JSON
+            }
+            .bodyValue(requestBody)
+
+        return requestWithBody
             .retrieve()
             .onStatus(HttpStatusCode::isError) { resp ->
-                log.warn("appointments request failed with status {}", resp.statusCode())
-                resp.bodyToMono(String::class.java).defaultIfEmpty("")
-                    .map { body -> ResponseStatusException(resp.statusCode(), body) }
+                resp.bodyToMono(String::class.java).defaultIfEmpty("").doOnNext { body ->
+                    log.warn("appointments request failed with status {} - {}", resp.statusCode(), body)
+                }.then(Mono.empty())
             }
-            .bodyToMono(AppointmentsResponse::class.java)
+            .bodyToMono(String::class.java)
+            .doOnNext { rawJson ->
+                log.debug("Raw appointments response: {}", rawJson)
+            }
+            .map { rawJson ->
+                try {
+                    com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
+                        .readValue(rawJson, AppointmentsResponse::class.java)
+                } catch (e: Exception) {
+                    log.error("Failed to parse appointments response. Raw JSON: {}", rawJson, e)
+                    null
+                }
+            }
+            .onErrorResume { error ->
+                log.warn("appointments request error: {}", error.message)
+                Mono.empty()
+            }
             .awaitSingleOrNull()
     }
 
