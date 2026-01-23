@@ -88,7 +88,9 @@ class AppointmentMapper {
         item.performer?.let {
             apt.addParticipant(
                 Appointment.AppointmentParticipantComponent().apply {
-                    actor = Reference().apply { display = listOfNotNull(it.givenName, it.familyName).joinToString(" ") }
+                    actor = Reference().apply {
+                        display = listOfNotNull(it.organisation, it.address?.formatted).joinToString(" - ")
+                    }
                     status = Appointment.ParticipationStatus.ACCEPTED
                 }
             )
@@ -96,7 +98,9 @@ class AppointmentMapper {
         item.location?.let {
             apt.addParticipant(
                 Appointment.AppointmentParticipantComponent().apply {
-                    actor = Reference().apply { display = listOfNotNull(it.title, it.address).joinToString(" - ") }
+                    actor = Reference().apply {
+                        display = listOfNotNull(it.organisation, it.address?.formatted).joinToString(" - ")
+                    }
                     status = Appointment.ParticipationStatus.ACCEPTED
                 }
             )
