@@ -6,9 +6,8 @@ sundhed:
     base-url: "https://www.sundhed.dk"
     connect-timeout: 5s
     read-timeout: 20s
-    forwarded-headers:
-      #- accept
-    static-headers:
+    # forwarded-headers: # defaults to "accept", "cookie","conversation-uuid","x-xsrf-token","x-queueit-ajaxpageurl","referer","user-agent","accept-language","page-app-id","dnt"
+    fallback-headers:
       user-agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
       # conversation-uuid: "96fb3d61-..."
       # x-xsrf-token: "277ff1af17..."

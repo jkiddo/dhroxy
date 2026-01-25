@@ -1,12 +1,6 @@
 package dhroxy.mapper
 
-import dhroxy.model.LabsvarResponse
-import dhroxy.model.Laboratorieresultat
-import dhroxy.model.QuantitativeFindings
-import dhroxy.model.Rekvisition
-import dhroxy.model.Svaroversigt
-import dhroxy.model.Undersoegelse
-import org.assertj.core.api.Assert
+import dhroxy.model.*
 import org.hl7.fhir.r4.model.Observation
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull

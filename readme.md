@@ -17,10 +17,10 @@ This service exposes a read-only FHIR API that maps sundhed.dk endpoints into FH
 - Organization → minlæge + core organisation (/api/minlaegeorganization + /api/core/organisation/{id})
 
 ## Headers and auth
-- The proxy is stateless. It forwards incoming headers (case-insensitive) that are listed in `application.yml` under `sundhed.client.forwarded-headers` and supplements them with `sundhed.client.static-headers`.
-- You can also preconfigure static headers in `application.yml` (e.g., `cookie`, `x-xsrf-token`, `conversation-uuid`, `user-agent`). If a static header is set, it overrides the incoming one.
+- The proxy is stateless. It forwards incoming headers (case-insensitive) that are listed in `application.yml` under `sundhed.client.forwarded-headers` and supplements them with `sundhed.client.fallback-headers` when not provided.
+- You can preconfigure fallback headers in `application.yml` (e.g., `cookie`, `x-xsrf-token`, `conversation-uuid`, `user-agent`). Fallback headers are only used when not provided by incoming forwarded headers.
 - Typical required headers for sundhed.dk calls (examples in `application.yml`): `cookie`, `x-xsrf-token`, `conversation-uuid`, `user-agent`. These are forwarded to every upstream call.
-- If you prefer not to send them per-request, set them in `application.yml`; the proxy will still accept per-request overrides.
+- Headers sent in requests to dhroxy take precedence over the configured fallback headers.
 
 ## Example: Read/Search-Only FHIR Transaction
 
@@ -109,21 +109,21 @@ Build and run:
 ```bash
 docker build -t dhroxy .
 docker run -p 8080:8080 \
-  -e SUNDHED_STATIC_COOKIE='sdk-user-accept-cookies=false; ...' \
-  -e SUNDHED_STATIC_X_XSRF_TOKEN='your-xsrf' \
-  -e SUNDHED_STATIC_CONVERSATION_UUID='f8da2975-6c6e-...' \
-  -e SUNDHED_STATIC_USER_AGENT='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36' \
+  -e SUNDHED_FALLBACK_COOKIE='sdk-user-accept-cookies=false; ...' \
+  -e SUNDHED_FALLBACK_X_XSRF_TOKEN='your-xsrf' \
+  -e SUNDHED_FALLBACK_CONVERSATION_UUID='f8da2975-6c6e-...' \
+  -e SUNDHED_FALLBACK_USER_AGENT='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36' \
   dhroxy
 ```
 
-### Static headers via env vars
-Static headers in `application.yml` under `sundhed.client.static-headers` can be overridden with env vars using upper-case keys prefixed with `SUNDHED_STATIC_`, dots/hyphens replaced by underscores. Examples:
-- `sundhed.client.static-headers.cookie` → `SUNDHED_STATIC_COOKIE`
-- `sundhed.client.static-headers.x-xsrf-token` → `SUNDHED_STATIC_X_XSRF_TOKEN`
-- `sundhed.client.static-headers.conversation-uuid` → `SUNDHED_STATIC_CONVERSATION_UUID`
-- `sundhed.client.static-headers.user-agent` → `SUNDHED_STATIC_USER_AGENT`
+### Fallback headers via env vars
+Fallback headers in `application.yml` under `sundhed.client.fallback-headers` can be set with env vars using upper-case keys prefixed with `SUNDHED_FALLBACK_`, dots/hyphens replaced by underscores. Examples:
+- `sundhed.client.fallback-headers.cookie` → `SUNDHED_FALLBACK_COOKIE`
+- `sundhed.client.fallback-headers.x-xsrf-token` → `SUNDHED_FALLBACK_X_XSRF_TOKEN`
+- `sundhed.client.fallback-headers.conversation-uuid` → `SUNDHED_FALLBACK_CONVERSATION_UUID`
+- `sundhed.client.fallback-headers.user-agent` → `SUNDHED_FALLBACK_USER_AGENT`
 
-If provided, these override incoming request headers; if omitted, per-request headers are forwarded according to `sundhed.client.forwarded-headers`.
+Fallback headers are only used when the corresponding header is not provided in the incoming request. Headers sent in requests take precedence.
 
 ### Where to copy headers from
 In the sundhed.dk portal, open the browser dev tools → Network tab, pick any authenticated API call, and copy the cookies/XSRF/conversation UUID and user-agent from the request headers. The screenshot below highlights the relevant headers:

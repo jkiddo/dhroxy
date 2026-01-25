@@ -21,10 +21,10 @@ data class SundhedClientProperties(
         "dnt"
     ),
     /**
-     * Optional static header values to inject into every outbound call.
+     * Optional fallback header values used when not provided by forwarded headers.
      * Map key should be lowercase header name.
      */
-    val staticHeaders: Map<String, String> = emptyMap(),
+    val fallbackHeaders: Map<String, String> = emptyMap(),
     /**
      * Eservices identifier used for the medication card endpoint (/api/eserviceslink/{id}).
      */

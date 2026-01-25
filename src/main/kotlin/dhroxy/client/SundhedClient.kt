@@ -19,7 +19,7 @@ class SundhedClient(
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val forwardedHeaderNames = props.forwardedHeaders.map { it.lowercase() }.toSet()
-    private val staticHeaderNames = props.staticHeaders.mapKeys { it.key.lowercase() }
+    private val fallbackHeaderNames = props.fallbackHeaders.mapKeys { it.key.lowercase() }
 
     suspend fun fetchLabsvar(
         fra: String?,
@@ -27,12 +27,24 @@ class SundhedClient(
         omraade: String?,
         incomingHeaders: HttpHeaders
     ): LabsvarResponse? {
+        val today = java.time.LocalDate.now()
+        val effectiveFra = if (fra.isNullOrBlank()) {
+            "${today.minusMonths(6)}T00:00:00"
+        } else {
+            fra
+        }
+        val effectiveTil = if (til.isNullOrBlank()) {
+            "${today}T23:59:59"
+        } else {
+            til
+        }
+
         return webClient.get()
             .uri { builder ->
                 builder.path("/api/labsvar/svaroversigt")
                     .apply {
-                        if (!fra.isNullOrBlank()) queryParam("fra", fra)//"2025-06-29T00%3A00%3A00")
-                        if (!til.isNullOrBlank()) queryParam("til", til)
+                        queryParam("fra", effectiveFra)
+                        queryParam("til", effectiveTil)
                         if (!omraade.isNullOrBlank()) queryParam("omraade", omraade)
                     }
                     .build()
@@ -44,7 +56,7 @@ class SundhedClient(
                 resp.bodyToMono<String>().defaultIfEmpty("")
                     .map { body -> ResponseStatusException(resp.statusCode(), body) }
             }
-            .bodyToMono(LabsvarResponse::class.java)
+            .bodyToMono<LabsvarResponse>()
             .awaitSingleOrNull()
     }
 
@@ -55,10 +67,10 @@ class SundhedClient(
             .retrieve()
             .onStatus(HttpStatusCode::isError) { resp ->
                 log.warn("vaccinations request failed with status {}", resp.statusCode())
-                resp.bodyToMono(String::class.java).defaultIfEmpty("")
+                resp.bodyToMono<String>().defaultIfEmpty("")
                     .map { body -> ResponseStatusException(resp.statusCode(), body) }
             }
-            .bodyToMono(Array<VaccinationRecord>::class.java)
+            .bodyToMono<Array<VaccinationRecord>>()
             .awaitSingleOrNull()
             ?.toList()
             ?: emptyList()
@@ -74,10 +86,10 @@ class SundhedClient(
             .retrieve()
             .onStatus(HttpStatusCode::isError) { resp ->
                 log.warn("vaccination history request failed with status {}", resp.statusCode())
-                resp.bodyToMono(String::class.java).defaultIfEmpty("")
+                resp.bodyToMono<String>().defaultIfEmpty("")
                     .map { body -> ResponseStatusException(resp.statusCode(), body) }
             }
-            .bodyToMono(Array<VaccinationHistoryEntry>::class.java)
+            .bodyToMono<Array<VaccinationHistoryEntry>>()
             .awaitSingleOrNull()
             ?.toList()
             ?: emptyList()
@@ -101,10 +113,10 @@ class SundhedClient(
             .retrieve()
             .onStatus(HttpStatusCode::isError) { resp ->
                 log.warn("imaging referral request failed with status {}", resp.statusCode())
-                resp.bodyToMono(String::class.java).defaultIfEmpty("")
+                resp.bodyToMono<String>().defaultIfEmpty("")
                     .map { body -> ResponseStatusException(resp.statusCode(), body) }
             }
-            .bodyToMono(ImagingReferralResponse::class.java)
+            .bodyToMono<ImagingReferralResponse>()
             .awaitSingleOrNull()
     }
 
@@ -117,10 +129,10 @@ class SundhedClient(
             .retrieve()
             .onStatus(HttpStatusCode::isError) { resp ->
                 log.warn("imaging referrals list request failed with status {}", resp.statusCode())
-                resp.bodyToMono(String::class.java).defaultIfEmpty("")
+                resp.bodyToMono<String>().defaultIfEmpty("")
                     .map { body -> ResponseStatusException(resp.statusCode(), body) }
             }
-            .bodyToMono(ImagingReferralsResponse::class.java)
+            .bodyToMono<ImagingReferralsResponse>()
             .awaitSingleOrNull()
     }
 
@@ -131,10 +143,10 @@ class SundhedClient(
             .retrieve()
             .onStatus(HttpStatusCode::isError) { resp ->
                 log.warn("ordination overview request failed with status {}", resp.statusCode())
-                resp.bodyToMono(String::class.java).defaultIfEmpty("")
+                resp.bodyToMono<String>().defaultIfEmpty("")
                     .map { body -> ResponseStatusException(resp.statusCode(), body) }
             }
-            .bodyToMono(OrdinationOverviewResponse::class.java)
+            .bodyToMono<OrdinationOverviewResponse>()
             .awaitSingleOrNull()
     }
 
@@ -145,10 +157,10 @@ class SundhedClient(
             .retrieve()
             .onStatus(HttpStatusCode::isError) { resp ->
                 log.warn("prescription overview request failed with status {}", resp.statusCode())
-                resp.bodyToMono(String::class.java).defaultIfEmpty("")
+                resp.bodyToMono<String>().defaultIfEmpty("")
                     .map { body -> ResponseStatusException(resp.statusCode(), body) }
             }
-            .bodyToMono(PrescriptionOverviewResponse::class.java)
+            .bodyToMono<PrescriptionOverviewResponse>()
             .awaitSingleOrNull()
     }
 
@@ -189,7 +201,7 @@ class SundhedClient(
                     log.warn("appointments request failed with status {} - {}", resp.statusCode(), body)
                 }.then(Mono.empty())
             }
-            .bodyToMono(String::class.java)
+            .bodyToMono<String>()
             .doOnNext { rawJson ->
                 log.debug("Raw appointments response: {}", rawJson)
             }
@@ -218,10 +230,10 @@ class SundhedClient(
             .retrieve()
             .onStatus(HttpStatusCode::isError) { resp ->
                 log.warn("person selection request failed with status {}", resp.statusCode())
-                resp.bodyToMono(String::class.java).defaultIfEmpty("")
+                resp.bodyToMono<String>().defaultIfEmpty("")
                     .map { body -> ResponseStatusException(resp.statusCode(), body) }
             }
-            .bodyToMono(PersonSelectionResponse::class.java)
+            .bodyToMono<PersonSelectionResponse>()
             .awaitSingleOrNull()
     }
 
@@ -234,10 +246,10 @@ class SundhedClient(
             .retrieve()
             .onStatus(HttpStatusCode::isError) { resp ->
                 log.warn("minlaegeorganization request failed with status {}", resp.statusCode())
-                resp.bodyToMono(String::class.java).defaultIfEmpty("")
+                resp.bodyToMono<String>().defaultIfEmpty("")
                     .map { body -> ResponseStatusException(resp.statusCode(), body) }
             }
-            .bodyToMono(MinLaegeOrganizationResponse::class.java)
+            .bodyToMono<MinLaegeOrganizationResponse>()
             .awaitSingleOrNull()
             ?.organizationId
     }
@@ -252,10 +264,10 @@ class SundhedClient(
             .retrieve()
             .onStatus(HttpStatusCode::isError) { resp ->
                 log.warn("core organisation request failed with status {}", resp.statusCode())
-                resp.bodyToMono(String::class.java).defaultIfEmpty("")
+                resp.bodyToMono<String>().defaultIfEmpty("")
                     .map { body -> ResponseStatusException(resp.statusCode(), body) }
             }
-            .bodyToMono(CoreOrganizationResponse::class.java)
+            .bodyToMono<CoreOrganizationResponse>()
             .awaitSingleOrNull()
     }
 
@@ -277,10 +289,10 @@ class SundhedClient(
             .retrieve()
             .onStatus(HttpStatusCode::isError) { resp ->
                 log.warn("medication card request failed with status {}", resp.statusCode())
-                resp.bodyToMono(String::class.java).defaultIfEmpty("")
+                resp.bodyToMono<String>().defaultIfEmpty("")
                     .map { body -> ResponseStatusException(resp.statusCode(), body) }
             }
-            .bodyToMono(Array<MedicationCardEntry>::class.java)
+            .bodyToMono<Array<MedicationCardEntry>>()
             .awaitSingleOrNull()
             ?.toList()
             ?: emptyList()
@@ -296,10 +308,10 @@ class SundhedClient(
             .retrieve()
             .onStatus(HttpStatusCode::isError) { resp ->
                 log.warn("ordination details request failed with status {}", resp.statusCode())
-                resp.bodyToMono(String::class.java).defaultIfEmpty("")
+                resp.bodyToMono<String>().defaultIfEmpty("")
                     .map { body -> ResponseStatusException(resp.statusCode(), body) }
             }
-            .bodyToMono(OrdinationDetails::class.java)
+            .bodyToMono<OrdinationDetails>()
             .awaitSingleOrNull()
     }
 
@@ -312,10 +324,10 @@ class SundhedClient(
             .retrieve()
             .onStatus(HttpStatusCode::isError) { resp ->
                 log.warn("diagnoser request failed with status {}", resp.statusCode())
-                resp.bodyToMono(String::class.java).defaultIfEmpty("")
+                resp.bodyToMono<String>().defaultIfEmpty("")
                     .map { body -> ResponseStatusException(resp.statusCode(), body) }
             }
-            .bodyToMono(DiagnoserResponse::class.java)
+            .bodyToMono<DiagnoserResponse>()
             .awaitSingleOrNull()
     }
 
@@ -336,7 +348,7 @@ class SundhedClient(
             .retrieve()
             .onStatus(HttpStatusCode::isError) { resp ->
                 log.warn("forloebsoversigt request failed with status {}", resp.statusCode())
-                resp.bodyToMono(String::class.java).defaultIfEmpty("")
+                resp.bodyToMono<String>().defaultIfEmpty("")
                     .map { body -> ResponseStatusException(resp.statusCode(), body) }
             }
             .bodyToMono(ForloebsoversigtResponse::class.java)
@@ -358,7 +370,7 @@ class SundhedClient(
             .retrieve()
             .onStatus(HttpStatusCode::isError) { resp ->
                 log.warn("kontaktperioder request failed with status {}", resp.statusCode())
-                resp.bodyToMono(String::class.java).defaultIfEmpty("")
+                resp.bodyToMono<String>().defaultIfEmpty("")
                     .map { body -> ResponseStatusException(resp.statusCode(), body) }
             }
             .bodyToMono(KontaktperioderResponse::class.java)
@@ -402,10 +414,10 @@ class SundhedClient(
             .retrieve()
             .onStatus(HttpStatusCode::isError) { resp ->
                 log.warn("notater request failed with status {}", resp.statusCode())
-                resp.bodyToMono(String::class.java).defaultIfEmpty("")
+                resp.bodyToMono<String>().defaultIfEmpty("")
                     .map { body -> ResponseStatusException(resp.statusCode(), body) }
             }
-            .bodyToMono(NotaterResponse::class.java)
+            .bodyToMono<NotaterResponse>()
             .awaitSingleOrNull()
     }
 
@@ -416,9 +428,11 @@ class SundhedClient(
                 outgoing.addAll(name, values)
             }
         }
-        // Static headers override incoming ones when provided
-        staticHeaderNames.forEach { (name, value) ->
-            outgoing.set(name, value)
+        // Fallback headers are only used when not already provided by forwarded headers
+        fallbackHeaderNames.forEach { (name, value) ->
+            if (!outgoing.containsKey(name)) {
+                outgoing.set(name, value)
+            }
         }
         if (!outgoing.containsKey(HttpHeaders.ACCEPT)) {
             outgoing.accept = listOf(MediaType.APPLICATION_JSON)

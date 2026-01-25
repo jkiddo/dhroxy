@@ -1,9 +1,10 @@
 package dhroxy.mapper
 
 import dhroxy.model.AppointmentItem
-import dhroxy.model.AppointmentLocation
 import dhroxy.model.AppointmentPerson
 import dhroxy.model.AppointmentsResponse
+import dhroxy.model.LocationDetailed
+import dhroxy.model.PerformerDetailed
 import org.hl7.fhir.r4.model.Appointment
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -24,13 +25,11 @@ class AppointmentMapperTest {
                 givenName = "Elias",
                 personIdentifier = "1207130201"
             ),
-            performer = AppointmentPerson(
-                familyName = "Doe",
-                givenName = "Dr."
+            performer = PerformerDetailed(
+                organisation = "Dr. Doe"
             ),
-            location = AppointmentLocation(
-                title = "Clinic A",
-                address = "Main Street 1"
+            location = LocationDetailed(
+                organisation = "Clinic A"
             )
         )
         val payload = AppointmentsResponse(appointments = listOf(apt))
