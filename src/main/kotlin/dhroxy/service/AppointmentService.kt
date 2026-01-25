@@ -17,7 +17,7 @@ class AppointmentService(
         end: String?,
         requestUrl: String
     ): Bundle {
-        val payload = client.fetchAppointments(headers)
+        val payload = client.fetchAppointments(headers, start, end)
         val bundle = mapper.toAppointmentBundle(payload, requestUrl)
         return mapper.filterByDate(bundle, start, end)
     }

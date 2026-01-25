@@ -36,8 +36,8 @@ class AppointmentMapper {
 
     fun filterByDate(bundle: Bundle, start: String?, end: String?): Bundle {
         if (start.isNullOrBlank() && end.isNullOrBlank()) return bundle
-        val startInstant = start?.let { OffsetDateTime.parse(it).toInstant() }
-        val endInstant = end?.let { OffsetDateTime.parse(it).toInstant() }
+        val startInstant = start?.let { parseToInstant(it, isEndDate = false) }
+        val endInstant = end?.let { parseToInstant(it, isEndDate = true) }
         val filtered = bundle.entry.filter { entry ->
             val apt = entry.resource as? Appointment ?: return@filter false
             val startDate = apt.start?.toInstant()
@@ -53,6 +53,39 @@ class AppointmentMapper {
             link = bundle.link
             filtered.forEach { addEntry(it) }
             total = filtered.size
+        }
+    }
+
+    /**
+     * Parses a date string to Instant, handling partial dates.
+     * - "1950" -> 1950-01-01T00:00:00Z (start) or 1950-12-31T23:59:59Z (end)
+     * - "1950-06" -> 1950-06-01T00:00:00Z (start) or 1950-06-30T23:59:59Z (end)
+     * - "1950-06-15" -> 1950-06-15T00:00:00Z (start) or 1950-06-15T23:59:59Z (end)
+     * - Full ISO-8601 datetime -> parsed directly
+     */
+    private fun parseToInstant(date: String, isEndDate: Boolean): java.time.Instant {
+        return try {
+            OffsetDateTime.parse(date).toInstant()
+        } catch (e: java.time.format.DateTimeParseException) {
+            val localDate = parseToLocalDate(date, isEndDate)
+            val time = if (isEndDate) java.time.LocalTime.MAX else java.time.LocalTime.MIN
+            localDate.atTime(time).toInstant(java.time.ZoneOffset.UTC)
+        }
+    }
+
+    private fun parseToLocalDate(date: String, isEndDate: Boolean): java.time.LocalDate {
+        val datePart = if (date.contains('T')) date.substringBefore('T') else date
+        val parts = datePart.split("-")
+        return when (parts.size) {
+            1 -> {
+                val year = parts[0].toInt()
+                if (isEndDate) java.time.LocalDate.of(year, 12, 31) else java.time.LocalDate.of(year, 1, 1)
+            }
+            2 -> {
+                val yearMonth = java.time.YearMonth.parse(datePart)
+                if (isEndDate) yearMonth.atEndOfMonth() else yearMonth.atDay(1)
+            }
+            else -> java.time.LocalDate.parse(datePart)
         }
     }
 

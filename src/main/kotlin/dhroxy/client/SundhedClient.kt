@@ -31,12 +31,12 @@ class SundhedClient(
         val effectiveFra = if (fra.isNullOrBlank()) {
             "${today.minusMonths(6)}T00:00:00"
         } else {
-            fra
+            formatDateWithTime(fra, "T00:00:00")
         }
         val effectiveTil = if (til.isNullOrBlank()) {
             "${today}T23:59:59"
         } else {
-            til
+            formatDateWithTime(til, "T23:59:59")
         }
 
         return webClient.get()
@@ -177,8 +177,8 @@ class SundhedClient(
         val defaultFrom = now.minusYears(1).toString()
         val defaultTo = now.plusYears(1).toString()
 
-        val effectiveFrom = fra ?: defaultFrom
-        val effectiveTo = til ?: defaultTo
+        val effectiveFrom = if (fra.isNullOrBlank()) defaultFrom else formatDate(fra, isEndDate = false)
+        val effectiveTo = if (til.isNullOrBlank()) defaultTo else formatDate(til, isEndDate = true)
 
         val requestBody = AppointmentsRequest(
             fromDate = effectiveFrom,
@@ -197,7 +197,7 @@ class SundhedClient(
         return requestWithBody
             .retrieve()
             .onStatus(HttpStatusCode::isError) { resp ->
-                resp.bodyToMono(String::class.java).defaultIfEmpty("").doOnNext { body ->
+                resp.bodyToMono<String>().defaultIfEmpty("").doOnNext { body ->
                     log.warn("appointments request failed with status {} - {}", resp.statusCode(), body)
                 }.then(Mono.empty())
             }
@@ -205,7 +205,7 @@ class SundhedClient(
             .doOnNext { rawJson ->
                 log.debug("Raw appointments response: {}", rawJson)
             }
-            .map { rawJson ->
+            .mapNotNull { rawJson ->
                 try {
                     com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
                         .readValue(rawJson, AppointmentsResponse::class.java)
@@ -419,6 +419,48 @@ class SundhedClient(
             }
             .bodyToMono<NotaterResponse>()
             .awaitSingleOrNull()
+    }
+
+    /**
+     * Formats a partial date string to a full date (YYYY-MM-DD).
+     * Handles various input formats:
+     * - "1950" -> "1950-01-01" (start) or "1950-12-31" (end)
+     * - "1950-06" -> "1950-06-01" (start) or "1950-06-30" (end)
+     * - "1950-06-15" -> "1950-06-15"
+     * - "1950-06-15T14:30:00" -> "1950-06-15" (time stripped)
+     */
+    private fun formatDate(date: String, isEndDate: Boolean): String {
+        val datePart = if (date.contains('T')) date.substringBefore('T') else date
+        val parts = datePart.split("-")
+        return when (parts.size) {
+            1 -> {
+                // Year only: "1950"
+                val year = parts[0]
+                if (isEndDate) "${year}-12-31" else "${year}-01-01"
+            }
+            2 -> {
+                // Year and month: "1950-06"
+                val yearMonth = java.time.YearMonth.parse(datePart)
+                if (isEndDate) yearMonth.atEndOfMonth().toString() else yearMonth.atDay(1).toString()
+            }
+            else -> datePart
+        }
+    }
+
+    /**
+     * Formats a date string to include a time component if not already present.
+     * Handles various input formats:
+     * - "1950" -> "1950-01-01" + timeSuffix (for start) or "1950-12-31" + timeSuffix (for end)
+     * - "1950-06" -> "1950-06-01" + timeSuffix (for start) or "1950-06-30" + timeSuffix (for end)
+     * - "1950-06-15" -> "1950-06-15" + timeSuffix
+     * - "1950-06-15T14:30:00" -> returned as-is
+     */
+    private fun formatDateWithTime(date: String, timeSuffix: String): String {
+        if (date.contains('T')) {
+            return date
+        }
+        val isEndDate = timeSuffix.contains("23:59:59")
+        return formatDate(date, isEndDate) + timeSuffix
     }
 
     private fun copyForwardedHeaders(incoming: HttpHeaders, outgoing: HttpHeaders) {

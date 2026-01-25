@@ -2,15 +2,9 @@ package dhroxy.mapper
 
 import dhroxy.model.CoreOrganization
 import dhroxy.model.CoreOrganizationResponse
-import org.hl7.fhir.r4.model.Address
-import org.hl7.fhir.r4.model.Bundle
-import org.hl7.fhir.r4.model.CodeableConcept
-import org.hl7.fhir.r4.model.Coding
-import org.hl7.fhir.r4.model.Identifier
-import org.hl7.fhir.r4.model.Organization
-import org.hl7.fhir.r4.model.UriType
+import org.hl7.fhir.r4.model.*
 import org.springframework.stereotype.Component
-import java.util.UUID
+import java.util.*
 
 @Component
 class OrganizationMapper {
