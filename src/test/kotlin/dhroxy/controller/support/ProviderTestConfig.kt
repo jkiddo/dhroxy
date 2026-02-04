@@ -7,6 +7,7 @@ import dhroxy.service.MedicationOverviewService
 import dhroxy.service.ObservationService
 import dhroxy.service.OrganizationService
 import dhroxy.service.PatientService
+import dhroxy.service.PatientSummaryService
 import dhroxy.service.VaccinationService
 import dhroxy.service.ConditionService
 import dhroxy.service.EncounterService
@@ -24,6 +25,7 @@ class ProviderTestConfig {
     @Bean @Primary fun imagingService(): ImagingService = mockk()
     @Bean @Primary fun medicationCardService(): MedicationCardService = mockk()
     @Bean @Primary fun patientService(): PatientService = mockk()
+    @Bean @Primary fun patientSummaryService(): PatientSummaryService = mockk()
     @Bean @Primary fun organizationService(): OrganizationService = mockk()
     @Bean @Primary fun appointmentService(): AppointmentService = mockk()
     @Bean @Primary fun conditionService(): ConditionService = mockk()

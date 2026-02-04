@@ -9,6 +9,7 @@ import dhroxy.service.MedicationOverviewService
 import dhroxy.service.ObservationService
 import dhroxy.service.OrganizationService
 import dhroxy.service.PatientService
+import dhroxy.service.PatientSummaryService
 import dhroxy.service.VaccinationService
 import dhroxy.service.ConditionService
 import dhroxy.service.EncounterService
@@ -39,6 +40,7 @@ abstract class BaseProviderIntegrationTest {
     @Autowired protected lateinit var imagingService: ImagingService
     @Autowired protected lateinit var medicationCardService: MedicationCardService
     @Autowired protected lateinit var patientService: PatientService
+    @Autowired protected lateinit var patientSummaryService: PatientSummaryService
     @Autowired protected lateinit var organizationService: OrganizationService
     @Autowired protected lateinit var appointmentService: AppointmentService
     @Autowired protected lateinit var conditionService: ConditionService
