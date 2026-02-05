@@ -4,4 +4,3 @@
 /.idea
 *.iml
 .gradle-cache
-gradle-wrapper.jar
