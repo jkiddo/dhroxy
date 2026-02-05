@@ -26,6 +26,10 @@ jobs:
       - name: Run IPA Conformance Test
         run: ./gradlew test --tests "dhroxy.conformance.IpaConformanceTest"
 
+      - name: Write job summary
+        if: always()
+        run: cat build/reports/ipa-conformance.md >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload conformance report
         if: always()
         uses: actions/upload-artifact@v4
